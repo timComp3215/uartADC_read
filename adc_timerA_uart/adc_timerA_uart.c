@@ -68,7 +68,7 @@
 #include <stdbool.h>
 
 //Sample size
-#define SAMPLES 8
+#define SAMPLES 1024
 
 //![Simple UART Config]
 /* UART Configuration Parameter. These are the configuration parameters to
@@ -110,8 +110,8 @@ const eUSCI_UART_Config uartConfig =
 const Timer_A_UpModeConfig upModeConfig =
 {
         TIMER_A_CLOCKSOURCE_ACLK,            // ACLK Clock Source
-        TIMER_A_CLOCKSOURCE_DIVIDER_1,       // ACLK/1 = 32.768Khz
-        16384,
+        TIMER_A_CLOCKSOURCE_DIVIDER_1,       // ACLK/1 = 128 kHz
+        125,
         TIMER_A_TAIE_INTERRUPT_DISABLE,      // Disable Timer ISR
         TIMER_A_CCIE_CCR0_INTERRUPT_DISABLE, // Disable CCR0
         TIMER_A_DO_CLEAR                     // Clear Counter
@@ -123,13 +123,12 @@ const Timer_A_CompareModeConfig compareConfig =
         TIMER_A_CAPTURECOMPARE_REGISTER_1,          // Use CCR1
         TIMER_A_CAPTURECOMPARE_INTERRUPT_DISABLE,   // Disable CCR interrupt
         TIMER_A_OUTPUTMODE_SET_RESET,               // Toggle output but
-        16384                                       // 16000 Period
+        100                                       // 16000 Period
 };
 
 /* Statics */
 volatile uint16_t resultsBuffer[SAMPLES];
-volatile uint8_t resPos = 0;
-volatile uint8_t button_debounce = 0;
+volatile uint16_t resPos = 0;
 volatile uint8_t sendValues = 0;
 
 int main(void)
@@ -142,7 +141,8 @@ int main(void)
      * ACLK = REFO = 32Khz */
     /* Setting DCO to 12MHz */
     CS_setDCOCenteredFrequency(CS_DCO_FREQUENCY_12);
-    CS_setReferenceOscillatorFrequency(CS_REFO_32KHZ);
+    //Increase oscillator frequency to 128 kHz
+    CS_setReferenceOscillatorFrequency(CS_REFO_128KHZ);
     MAP_CS_initClockSignal(CS_ACLK, CS_REFOCLK_SELECT, CS_CLOCK_DIVIDER_1);
 
     //Set serial pins to serial mode
