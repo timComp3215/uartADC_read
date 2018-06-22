@@ -57,6 +57,8 @@
  * Edited version of example code to send ADC reading over serial in ASCII
  * 9600 baud rate
  *
+ * Read SAMPLES no of ADC reading on push button 1.1 (S1)
+ *
  ******************************************************************************/
 /* DriverLib Includes */
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
@@ -64,6 +66,9 @@
 /* Standard Includes */
 #include <stdint.h>
 #include <stdbool.h>
+
+//Sample size
+#define SAMPLES 8
 
 //![Simple UART Config]
 /* UART Configuration Parameter. These are the configuration parameters to
@@ -122,8 +127,10 @@ const Timer_A_CompareModeConfig compareConfig =
 };
 
 /* Statics */
-volatile uint16_t resultsBuffer[UINT8_MAX];
+volatile uint16_t resultsBuffer[SAMPLES];
 volatile uint8_t resPos = 0;
+volatile uint8_t button_debounce = 0;
+volatile uint8_t sendValues = 0;
 
 int main(void)
 {
@@ -147,6 +154,13 @@ int main(void)
 
     /* Enable UART module */
     MAP_UART_enableModule(EUSCI_A0_BASE);
+
+    /* Confinguring P1.1 as an input and enabling interrupts */
+    MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
+    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, GPIO_PIN1);
+    MAP_GPIO_enableInterrupt(GPIO_PORT_P1, GPIO_PIN1);
+    MAP_GPIO_interruptEdgeSelect(GPIO_PORT_P1, GPIO_PIN1, GPIO_HIGH_TO_LOW_TRANSITION);
+    MAP_Interrupt_enableInterrupt(INT_PORT1);
 
     /* Enabling interrupts */
     //MAP_UART_enableInterrupt(EUSCI_A0_BASE, EUSCI_A_UART_RECEIVE_INTERRUPT);
@@ -191,14 +205,15 @@ int main(void)
     while (1)
     {
         //MAP_PCM_gotoLPM0();
-        if (resPos == 1)
+        if (sendValues == 1)
         {
             int i;
-            for (i=0; i<1; i++)
+            for (i=0; i<SAMPLES; i++)
             {
                 sendReading(resultsBuffer[i]);
             }
             resPos = 0;
+            sendValues = 0;
         }
     }
 }
@@ -212,18 +227,34 @@ void ADC14_IRQHandler(void)
     status = MAP_ADC14_getEnabledInterruptStatus();
     MAP_ADC14_clearInterruptFlag(status);
 
-
     if (status & ADC_INT0)
     {
-        if(resPos < 1)
+        if(resPos < SAMPLES)
         {
             resultsBuffer[resPos] = MAP_ADC14_getResult(ADC_MEM0);
             resPos++;
         }
-        
-
+        else
+        {
+            //Stop reading values
+            MAP_Interrupt_disableInterrupt(INT_ADC14);
+            //Send values
+            sendValues = 1;
+        }
     }
+}
 
+void PORT1_IRQHandler(void)
+{
+    uint32_t status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
+    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
+
+    /* Handles S1 button press */
+    if (status & GPIO_PIN1)
+    {
+        //Enable ADC reads
+        MAP_Interrupt_enableInterrupt(INT_ADC14);
+    }
 }
 
 void EUSCIA0_IRQHandler(void)
