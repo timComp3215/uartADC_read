@@ -68,7 +68,7 @@
 #include <stdbool.h>
 
 //Sample size
-#define SAMPLES 1024
+#define SAMPLES 2048
 
 //![Simple UART Config]
 /* UART Configuration Parameter. These are the configuration parameters to
@@ -107,11 +107,21 @@ const eUSCI_UART_Config uartConfig =
 };
 
 /* Timer_A Continuous Mode Configuration Parameter */
-const Timer_A_UpModeConfig upModeConfig =
+/*const Timer_A_UpModeConfig upModeConfig =
 {
         TIMER_A_CLOCKSOURCE_ACLK,            // ACLK Clock Source
         TIMER_A_CLOCKSOURCE_DIVIDER_1,       // ACLK/1 = 128 kHz
         125,
+        TIMER_A_TAIE_INTERRUPT_DISABLE,      // Disable Timer ISR
+        TIMER_A_CCIE_CCR0_INTERRUPT_DISABLE, // Disable CCR0
+        TIMER_A_DO_CLEAR                     // Clear Counter
+};*/
+
+const Timer_A_UpModeConfig upModeConfig =
+{
+        TIMER_A_CLOCKSOURCE_SMCLK,            // SMCLK Clock Source
+        TIMER_A_CLOCKSOURCE_DIVIDER_1,       // SMCLK/1 = 12 MHz
+        2400,
         TIMER_A_TAIE_INTERRUPT_DISABLE,      // Disable Timer ISR
         TIMER_A_CCIE_CCR0_INTERRUPT_DISABLE, // Disable CCR0
         TIMER_A_DO_CLEAR                     // Clear Counter
@@ -170,6 +180,8 @@ int main(void)
     MAP_ADC14_enableModule();
     MAP_ADC14_initModule(ADC_CLOCKSOURCE_MCLK, ADC_PREDIVIDER_1, ADC_DIVIDER_1,
             0);
+    MAP_ADC14_setSampleHoldTime(ADC_PULSE_WIDTH_16, ADC_PULSE_WIDTH_16);
+    MAP_ADC14_setResolution(ADC_14BIT);
 
     /* Configuring GPIOs (5.5 A0) */
     MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P5, GPIO_PIN5,
